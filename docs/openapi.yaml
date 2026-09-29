@@ -1,0 +1,259 @@
+openapi: 3.0.3
+info:
+  title: CampusHub API
+  description: >-
+    Multi-tenant campus resource management API. All resource and reservation
+    data is scoped to a tenant; clients must supply a tenant identifier on
+    every request.
+  version: 1.0.0
+servers:
+  - url: /api/v1
+    description: Base API path
+
+tags:
+  - name: Resources
+    description: Campus resources available for reservation
+  - name: Reservations
+    description: Reservations made against campus resources
+
+paths:
+  /resources:
+    get:
+      tags:
+        - Resources
+      summary: List resources
+      description: Returns resources for the current tenant, optionally filtered by type.
+      operationId: listResources
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - name: type
+          in: query
+          required: false
+          description: Filter resources by their type (e.g. room, equipment, vehicle).
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A list of resources matching the filter.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Resource'
+        '400':
+          description: Invalid query parameter.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /reservations:
+    post:
+      tags:
+        - Reservations
+      summary: Create a reservation
+      description: >-
+        Creates a reservation for a resource. Returns 409 Conflict if the
+        requested resource is already reserved for an overlapping time window.
+      operationId: createReservation
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationRequest'
+      responses:
+        '201':
+          description: Reservation created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '400':
+          description: Invalid reservation request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: The resource is already reserved for the requested time window.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /reservations/user/{userId}:
+    get:
+      tags:
+        - Reservations
+      summary: List reservations for a user
+      description: Returns all reservations made by the given user within the current tenant.
+      operationId: listReservationsByUser
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - name: userId
+          in: path
+          required: true
+          description: Identifier of the user whose reservations are being requested.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A list of reservations belonging to the user.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Reservation'
+        '404':
+          description: No user found for the given identifier.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  parameters:
+    TenantIdHeader:
+      name: X-Tenant-Id
+      in: header
+      required: true
+      description: Identifier of the tenant the request applies to.
+      schema:
+        type: string
+
+  schemas:
+    Resource:
+      type: object
+      required:
+        - id
+        - tenantId
+        - name
+        - type
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the resource.
+        tenantId:
+          type: string
+          description: Identifier of the owning tenant.
+        name:
+          type: string
+          description: Human-readable name of the resource.
+        type:
+          type: string
+          description: Category of the resource (e.g. room, equipment, vehicle).
+        description:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ReservationRequest:
+      type: object
+      required:
+        - resourceId
+        - userId
+        - startTime
+        - endTime
+      properties:
+        resourceId:
+          type: string
+          description: Identifier of the resource being reserved.
+        userId:
+          type: string
+          description: Identifier of the user making the reservation.
+        startTime:
+          type: string
+          format: date-time
+          description: ISO 8601 date-time marking the start of the reservation.
+        endTime:
+          type: string
+          format: date-time
+          description: ISO 8601 date-time marking the end of the reservation.
+
+    Reservation:
+      type: object
+      required:
+        - id
+        - tenantId
+        - resourceId
+        - userId
+        - startTime
+        - endTime
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the reservation.
+        tenantId:
+          type: string
+          description: Identifier of the owning tenant.
+        resourceId:
+          type: string
+          description: Identifier of the reserved resource.
+        userId:
+          type: string
+          description: Identifier of the user who made the reservation.
+        startTime:
+          type: string
+          format: date-time
+          description: ISO 8601 date-time marking the start of the reservation.
+        endTime:
+          type: string
+          format: date-time
+          description: ISO 8601 date-time marking the end of the reservation.
+        status:
+          type: string
+          description: Current lifecycle state of the reservation.
+          enum:
+            - PENDING
+            - CONFIRMED
+            - CANCELLED
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code.
+        message:
+          type: string
+          description: Human-readable description of the error.

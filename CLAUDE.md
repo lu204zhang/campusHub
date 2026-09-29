@@ -1,4 +1,4 @@
-# CampusHub Backend — Codex Instructions
+# CampusHub Backend — Claude Code Instructions
 
 ## Project purpose
 
@@ -80,7 +80,7 @@ Run relevant endpoint or automated tests when they exist. Report any check that 
   - how the architecture and safety rules in this file were applied;
   - which validation commands were run and whether they passed.
 
-## Codex working behavior
+## Claude Code working behavior
 
 - Read this file and the relevant existing code before editing.
 - Preserve user-authored changes and do not overwrite unrelated work.
