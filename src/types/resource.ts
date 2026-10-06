@@ -1,11 +1,14 @@
+type ResourceType = 'ROOM' | 'EQUIPMENT' | 'LAB';
+
 interface Resource {
   id: string;
   tenantId: string;
   name: string;
-  type: string;
-  description?: string | null;
+  type: ResourceType;
+  location: string;
+  isAvailable: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
-export { type Resource };
+export { type Resource, type ResourceType };

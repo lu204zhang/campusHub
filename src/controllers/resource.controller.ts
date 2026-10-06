@@ -2,13 +2,18 @@ import type { NextFunction, Request, Response } from 'express';
 
 import { listResources as listResourcesForTenant } from '../services/resource.service';
 import type { ErrorResponse } from '../types/reservation';
-import type { Resource } from '../types/resource';
+import type { Resource, ResourceType } from '../types/resource';
 
 const TENANT_HEADER = 'x-tenant-id';
+const RESOURCE_TYPES: readonly ResourceType[] = ['ROOM', 'EQUIPMENT', 'LAB'];
 
 function getTenantId(request: Request): string | undefined {
   const header = request.headers[TENANT_HEADER];
   return typeof header === 'string' && header.length > 0 ? header : undefined;
+}
+
+function isResourceType(value: string): value is ResourceType {
+  return (RESOURCE_TYPES as readonly string[]).includes(value);
 }
 
 type ListResourcesRequest = Request<Record<string, never>, Resource[] | ErrorResponse>;
@@ -28,7 +33,7 @@ async function listResources(
   }
 
   const rawType: unknown = request.query.type;
-  let type: string | undefined;
+  let type: ResourceType | undefined;
   if (rawType !== undefined) {
     if (typeof rawType !== 'string' || rawType.length === 0) {
       response.status(400).json({
@@ -37,6 +42,15 @@ async function listResources(
       });
       return;
     }
+
+    if (!isResourceType(rawType)) {
+      response.status(400).json({
+        code: 'VALIDATION_ERROR',
+        message: `type must be one of ${RESOURCE_TYPES.join(', ')}.`,
+      });
+      return;
+    }
+
     type = rawType;
   }
 

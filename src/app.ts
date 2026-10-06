@@ -1,11 +1,13 @@
 import express, { type ErrorRequestHandler, type Express } from 'express';
 
+import { connectToDatabase } from './config/database';
+import { getPort } from './config/env';
 import { healthRouter } from './routes/health.routes';
 import { reservationRouter } from './routes/reservation.routes';
 import { resourceRouter } from './routes/resource.routes';
 
 const app: Express = express();
-const port: number = Number(process.env.PORT ?? 3000);
+const port: number = getPort();
 
 app.use(express.json());
 app.use('/api/v1/health', healthRouter);
@@ -20,6 +22,13 @@ const handleUnexpectedError: ErrorRequestHandler = (_error, _request, response, 
 
 app.use(handleUnexpectedError);
 
-app.listen(port, (): void => {
-  console.log(`CampusHub API listening on port ${port}`);
-});
+connectToDatabase()
+  .then((): void => {
+    app.listen(port, (): void => {
+      console.log(`CampusHub API listening on port ${port}`);
+    });
+  })
+  .catch((error: unknown): void => {
+    console.error('Failed to connect to MongoDB:', error);
+    process.exit(1);
+  });

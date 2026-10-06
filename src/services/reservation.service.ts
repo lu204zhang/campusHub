@@ -1,6 +1,15 @@
-import { randomUUID } from 'node:crypto';
+import { Types } from 'mongoose';
 
+import { ReservationModel, type ReservationDocument } from '../models/Reservation.model';
+import { ResourceModel } from '../models/Resource.model';
 import type { Reservation, ReservationRequest } from '../types/reservation';
+
+class ReservationValidationError extends Error {
+  public constructor(message: string) {
+    super(message);
+    this.name = 'ReservationValidationError';
+  }
+}
 
 class ReservationConflictError extends Error {
   public constructor(message: string) {
@@ -9,45 +18,48 @@ class ReservationConflictError extends Error {
   }
 }
 
-const reservationsByTenant = new Map<string, Reservation[]>();
-
-function getTenantReservations(tenantId: string): Reservation[] {
-  const existing = reservationsByTenant.get(tenantId);
-  if (existing) {
-    return existing;
-  }
-
-  const created: Reservation[] = [];
-  reservationsByTenant.set(tenantId, created);
-  return created;
-}
-
-function overlaps(
-  reservation: Reservation,
-  resourceId: string,
-  startTime: Date,
-  endTime: Date,
-): boolean {
-  if (reservation.resourceId !== resourceId || reservation.status === 'CANCELLED') {
-    return false;
-  }
-
-  const existingStart = new Date(reservation.startTime);
-  const existingEnd = new Date(reservation.endTime);
-  return startTime < existingEnd && endTime > existingStart;
+function toReservation(document: ReservationDocument): Reservation {
+  return {
+    id: document._id.toString(),
+    tenantId: document.tenantId,
+    resourceId: document.resourceId.toString(),
+    userId: document.userId,
+    startTime: document.startTime.toISOString(),
+    endTime: document.endTime.toISOString(),
+    status: document.status,
+    createdAt: document.createdAt.toISOString(),
+    updatedAt: document.updatedAt.toISOString(),
+  };
 }
 
 async function createReservation(
   tenantId: string,
   request: ReservationRequest,
 ): Promise<Reservation> {
+  if (!Types.ObjectId.isValid(request.resourceId)) {
+    throw new ReservationValidationError(
+      `resourceId ${request.resourceId} is not a valid identifier.`,
+    );
+  }
+
+  const resourceId = new Types.ObjectId(request.resourceId);
   const startTime = new Date(request.startTime);
   const endTime = new Date(request.endTime);
-  const tenantReservations = getTenantReservations(tenantId);
 
-  const hasConflict = tenantReservations.some((reservation) =>
-    overlaps(reservation, request.resourceId, startTime, endTime),
-  );
+  const resourceExists = await ResourceModel.exists({ _id: resourceId, tenantId });
+  if (!resourceExists) {
+    throw new ReservationValidationError(
+      `Resource ${request.resourceId} was not found for this tenant.`,
+    );
+  }
+
+  const hasConflict = await ReservationModel.exists({
+    tenantId,
+    resourceId,
+    status: { $ne: 'CANCELLED' },
+    startTime: { $lt: endTime },
+    endTime: { $gt: startTime },
+  });
 
   if (hasConflict) {
     throw new ReservationConflictError(
@@ -55,25 +67,26 @@ async function createReservation(
     );
   }
 
-  const now = new Date().toISOString();
-  const reservation: Reservation = {
-    id: randomUUID(),
+  const created = await ReservationModel.create({
     tenantId,
-    resourceId: request.resourceId,
+    resourceId,
     userId: request.userId,
-    startTime: startTime.toISOString(),
-    endTime: endTime.toISOString(),
+    startTime,
+    endTime,
     status: 'PENDING',
-    createdAt: now,
-    updatedAt: now,
-  };
+  });
 
-  tenantReservations.push(reservation);
-  return reservation;
+  return toReservation(created);
 }
 
 async function listReservationsByUser(tenantId: string, userId: string): Promise<Reservation[]> {
-  return getTenantReservations(tenantId).filter((reservation) => reservation.userId === userId);
+  const documents = await ReservationModel.find({ tenantId, userId }).sort({ startTime: 1 });
+  return documents.map(toReservation);
 }
 
-export { createReservation, listReservationsByUser, ReservationConflictError };
+export {
+  createReservation,
+  listReservationsByUser,
+  ReservationConflictError,
+  ReservationValidationError,
+};

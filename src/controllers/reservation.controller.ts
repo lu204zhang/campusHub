@@ -4,6 +4,7 @@ import {
   createReservation as createReservationForTenant,
   listReservationsByUser as listReservationsByUserForTenant,
   ReservationConflictError,
+  ReservationValidationError,
 } from '../services/reservation.service';
 import type { ErrorResponse, Reservation, ReservationRequest } from '../types/reservation';
 
@@ -71,6 +72,10 @@ async function createReservation(
   } catch (error) {
     if (error instanceof ReservationConflictError) {
       response.status(409).json({ code: 'RESERVATION_CONFLICT', message: error.message });
+      return;
+    }
+    if (error instanceof ReservationValidationError) {
+      response.status(400).json({ code: 'VALIDATION_ERROR', message: error.message });
       return;
     }
     next(error);

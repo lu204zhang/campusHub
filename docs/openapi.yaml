@@ -29,9 +29,13 @@ paths:
         - name: type
           in: query
           required: false
-          description: Filter resources by their type (e.g. room, equipment, vehicle).
+          description: Filter resources by their type.
           schema:
             type: string
+            enum:
+              - ROOM
+              - EQUIPMENT
+              - LAB
       responses:
         '200':
           description: A list of resources matching the filter.
@@ -152,6 +156,10 @@ components:
         - tenantId
         - name
         - type
+        - location
+        - isAvailable
+        - createdAt
+        - updatedAt
       properties:
         id:
           type: string
@@ -164,10 +172,17 @@ components:
           description: Human-readable name of the resource.
         type:
           type: string
-          description: Category of the resource (e.g. room, equipment, vehicle).
-        description:
+          description: Category of the resource.
+          enum:
+            - ROOM
+            - EQUIPMENT
+            - LAB
+        location:
           type: string
-          nullable: true
+          description: Physical location of the resource on campus.
+        isAvailable:
+          type: boolean
+          description: Whether the resource is currently available for reservation.
         createdAt:
           type: string
           format: date-time
