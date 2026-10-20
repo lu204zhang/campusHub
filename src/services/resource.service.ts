@@ -14,17 +14,22 @@ function toResource(document: ResourceDocument): Resource {
   };
 }
 
-async function listResources(
-  tenantId: string,
-  type: ResourceType | undefined,
-): Promise<Resource[]> {
-  const filter: { tenantId: string; type?: ResourceType } = { tenantId };
-  if (type !== undefined) {
-    filter.type = type;
+interface ListResourcesFilter {
+  type?: ResourceType;
+  isAvailable?: boolean;
+}
+
+async function listResources(tenantId: string, filter: ListResourcesFilter): Promise<Resource[]> {
+  const query: { tenantId: string; type?: ResourceType; isAvailable?: boolean } = { tenantId };
+  if (filter.type !== undefined) {
+    query.type = filter.type;
+  }
+  if (filter.isAvailable !== undefined) {
+    query.isAvailable = filter.isAvailable;
   }
 
-  const documents = await ResourceModel.find(filter).sort({ name: 1 });
+  const documents = await ResourceModel.find(query).sort({ name: 1 });
   return documents.map(toResource);
 }
 
-export { listResources };
+export { listResources, type ListResourcesFilter };

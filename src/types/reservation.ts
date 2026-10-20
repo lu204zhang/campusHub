@@ -19,9 +19,19 @@ interface ReservationRequest {
   endTime: string;
 }
 
+interface ReservationStatusUpdateRequest {
+  status: ReservationStatus;
+}
+
 interface ErrorResponse {
   code: string;
   message: string;
 }
 
-export { type ErrorResponse, type Reservation, type ReservationRequest, type ReservationStatus };
+export {
+  type ErrorResponse,
+  type Reservation,
+  type ReservationRequest,
+  type ReservationStatus,
+  type ReservationStatusUpdateRequest,
+};

@@ -1,14 +1,24 @@
 import type { NextFunction, Request, Response } from 'express';
 
 import {
+  cancelReservation as cancelReservationForTenant,
   createReservation as createReservationForTenant,
   listReservationsByUser as listReservationsByUserForTenant,
   ReservationConflictError,
+  ReservationNotFoundError,
   ReservationValidationError,
+  updateReservationStatus as updateReservationStatusForTenant,
 } from '../services/reservation.service';
-import type { ErrorResponse, Reservation, ReservationRequest } from '../types/reservation';
+import type {
+  ErrorResponse,
+  Reservation,
+  ReservationRequest,
+  ReservationStatus,
+  ReservationStatusUpdateRequest,
+} from '../types/reservation';
 
 const TENANT_HEADER = 'x-tenant-id';
+const UPDATABLE_STATUSES: readonly ReservationStatus[] = ['CONFIRMED', 'CANCELLED'];
 
 function getTenantId(request: Request): string | undefined {
   const header = request.headers[TENANT_HEADER];
@@ -17,6 +27,18 @@ function getTenantId(request: Request): string | undefined {
 
 function isIsoDateTime(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && !Number.isNaN(Date.parse(value));
+}
+
+function isReservationStatusUpdateRequest(value: unknown): value is ReservationStatusUpdateRequest {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.status === 'string' &&
+    (UPDATABLE_STATUSES as readonly string[]).includes(candidate.status)
+  );
 }
 
 function isReservationRequest(value: unknown): value is ReservationRequest {
@@ -106,4 +128,80 @@ async function listReservationsByUser(
   }
 }
 
-export { createReservation, listReservationsByUser };
+type UpdateReservationStatusRequest = Request<{ id: string }, Reservation | ErrorResponse, unknown>;
+type UpdateReservationStatusResponse = Response<Reservation | ErrorResponse>;
+
+async function updateReservationStatus(
+  request: UpdateReservationStatusRequest,
+  response: UpdateReservationStatusResponse,
+  next: NextFunction,
+): Promise<void> {
+  const tenantId = getTenantId(request);
+  if (!tenantId) {
+    response
+      .status(400)
+      .json({ code: 'TENANT_ID_REQUIRED', message: 'X-Tenant-Id header is required.' });
+    return;
+  }
+
+  if (!isReservationStatusUpdateRequest(request.body)) {
+    response.status(400).json({
+      code: 'INVALID_STATUS_UPDATE_REQUEST',
+      message: `status is required and must be one of ${UPDATABLE_STATUSES.join(', ')}.`,
+    });
+    return;
+  }
+
+  try {
+    const reservation = await updateReservationStatusForTenant(
+      tenantId,
+      request.params.id,
+      request.body.status,
+    );
+    response.status(200).json(reservation);
+  } catch (error) {
+    if (error instanceof ReservationNotFoundError) {
+      response.status(404).json({ code: 'RESERVATION_NOT_FOUND', message: error.message });
+      return;
+    }
+    if (error instanceof ReservationValidationError) {
+      response.status(400).json({ code: 'VALIDATION_ERROR', message: error.message });
+      return;
+    }
+    next(error);
+  }
+}
+
+type CancelReservationRequest = Request<{ id: string }, Reservation | ErrorResponse>;
+type CancelReservationResponse = Response<Reservation | ErrorResponse>;
+
+async function cancelReservation(
+  request: CancelReservationRequest,
+  response: CancelReservationResponse,
+  next: NextFunction,
+): Promise<void> {
+  const tenantId = getTenantId(request);
+  if (!tenantId) {
+    response
+      .status(400)
+      .json({ code: 'TENANT_ID_REQUIRED', message: 'X-Tenant-Id header is required.' });
+    return;
+  }
+
+  try {
+    const reservation = await cancelReservationForTenant(tenantId, request.params.id);
+    response.status(200).json(reservation);
+  } catch (error) {
+    if (error instanceof ReservationNotFoundError) {
+      response.status(404).json({ code: 'RESERVATION_NOT_FOUND', message: error.message });
+      return;
+    }
+    if (error instanceof ReservationValidationError) {
+      response.status(400).json({ code: 'VALIDATION_ERROR', message: error.message });
+      return;
+    }
+    next(error);
+  }
+}
+
+export { cancelReservation, createReservation, listReservationsByUser, updateReservationStatus };

@@ -2,7 +2,7 @@ import { Types } from 'mongoose';
 
 import { ReservationModel, type ReservationDocument } from '../models/Reservation.model';
 import { ResourceModel } from '../models/Resource.model';
-import type { Reservation, ReservationRequest } from '../types/reservation';
+import type { Reservation, ReservationRequest, ReservationStatus } from '../types/reservation';
 
 class ReservationValidationError extends Error {
   public constructor(message: string) {
@@ -15,6 +15,13 @@ class ReservationConflictError extends Error {
   public constructor(message: string) {
     super(message);
     this.name = 'ReservationConflictError';
+  }
+}
+
+class ReservationNotFoundError extends Error {
+  public constructor(message: string) {
+    super(message);
+    this.name = 'ReservationNotFoundError';
   }
 }
 
@@ -84,9 +91,38 @@ async function listReservationsByUser(tenantId: string, userId: string): Promise
   return documents.map(toReservation);
 }
 
+async function updateReservationStatus(
+  tenantId: string,
+  id: string,
+  status: ReservationStatus,
+): Promise<Reservation> {
+  if (!Types.ObjectId.isValid(id)) {
+    throw new ReservationValidationError(`Reservation id ${id} is not a valid identifier.`);
+  }
+
+  const updated = await ReservationModel.findOneAndUpdate(
+    { _id: id, tenantId },
+    { status },
+    { new: true },
+  );
+
+  if (!updated) {
+    throw new ReservationNotFoundError(`Reservation ${id} was not found for this tenant.`);
+  }
+
+  return toReservation(updated);
+}
+
+async function cancelReservation(tenantId: string, id: string): Promise<Reservation> {
+  return updateReservationStatus(tenantId, id, 'CANCELLED');
+}
+
 export {
+  cancelReservation,
   createReservation,
   listReservationsByUser,
   ReservationConflictError,
+  ReservationNotFoundError,
   ReservationValidationError,
+  updateReservationStatus,
 };

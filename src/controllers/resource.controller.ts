@@ -1,6 +1,9 @@
 import type { NextFunction, Request, Response } from 'express';
 
-import { listResources as listResourcesForTenant } from '../services/resource.service';
+import {
+  listResources as listResourcesForTenant,
+  type ListResourcesFilter,
+} from '../services/resource.service';
 import type { ErrorResponse } from '../types/reservation';
 import type { Resource, ResourceType } from '../types/resource';
 
@@ -54,8 +57,30 @@ async function listResources(
     type = rawType;
   }
 
+  const rawIsAvailable: unknown = request.query.isAvailable;
+  let isAvailable: boolean | undefined;
+  if (rawIsAvailable !== undefined) {
+    if (rawIsAvailable !== 'true' && rawIsAvailable !== 'false') {
+      response.status(400).json({
+        code: 'VALIDATION_ERROR',
+        message: 'isAvailable must be either "true" or "false" when provided.',
+      });
+      return;
+    }
+
+    isAvailable = rawIsAvailable === 'true';
+  }
+
+  const filter: ListResourcesFilter = {};
+  if (type !== undefined) {
+    filter.type = type;
+  }
+  if (isAvailable !== undefined) {
+    filter.isAvailable = isAvailable;
+  }
+
   try {
-    const resources = await listResourcesForTenant(tenantId, type);
+    const resources = await listResourcesForTenant(tenantId, filter);
     response.status(200).json(resources);
   } catch (error) {
     next(error);
