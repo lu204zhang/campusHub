@@ -1,0 +1,36 @@
+.app {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 20px;
+  text-align: left;
+}
+
+.identityBar {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.identityField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.identityField label {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.identityField input {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font: inherit;
+  color: var(--text-h);
+  background: var(--bg);
+}
+
+.sectionHeading {
+  margin: 32px 0 16px;
+}

@@ -1,0 +1,106 @@
+.filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.filterButton {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+}
+
+.filterButtonActive {
+  composes: filterButton;
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  color: var(--text-h);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: left;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.cardName {
+  margin: 0;
+  font-size: 18px;
+  color: var(--text-h);
+}
+
+.cardType {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text);
+}
+
+.cardLocation {
+  margin: 8px 0;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.badgeAvailable {
+  composes: badge;
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.badgeUnavailable {
+  composes: badge;
+  background: var(--border);
+  color: var(--text);
+}
+
+.bookButton {
+  margin-top: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--text-h);
+  cursor: pointer;
+  font: inherit;
+}
+
+.bookButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.empty,
+.status {
+  color: var(--text);
+}
+
+.errorText {
+  margin: 0;
+  color: #d33;
+  font-size: 14px;
+}

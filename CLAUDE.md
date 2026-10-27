@@ -2,7 +2,7 @@
 
 ## Project purpose
 
-CampusHub is a multi-tenant campus resource management backend. Preserve tenant boundaries in all future data access and business logic. This repository contains only the Node.js backend service.
+CampusHub is a multi-tenant campus resource management backend. Preserve tenant boundaries in all future data access and business logic. The backend service lives at the repository root under `src/`. A separate React/TypeScript client may live in `client/`; it is a distinct application with its own `package.json`, build tooling, and dependency set, and the rules in this file about the backend (authorized technology, architecture layers, TypeScript rules, API conventions) apply to `src/`, not to `client/`. See "Frontend guidelines" below for the rules that apply inside `client/`.
 
 ## Authorized technology
 
@@ -52,6 +52,16 @@ Do not bypass a layer. Shared middleware, configuration, or utility modules may 
 - Use HTTP status codes appropriate to the outcome.
 - Keep route handlers thin and deterministic.
 - For multi-tenant resources, require an explicit tenant identifier and include it in every relevant query. Never permit cross-tenant reads or writes.
+
+## Frontend guidelines (`client/`)
+
+- Stack: React with TypeScript, scaffolded via Vite (`npm create vite@latest client -- --template react-ts`). Keep `strict` mode enabled in `client/tsconfig.json`.
+- Component architecture: functional components only. Give every component an explicit, exported TypeScript prop interface — no inline or implicit prop types.
+- State management: use standard React hooks (`useState`, `useEffect`, etc.) or custom hooks extracted into their own files. Do not call APIs inline inside JSX or component bodies directly; route all HTTP calls through the typed API service layer (e.g. `src/api/`).
+- API layer: keep a single typed API service module (or a small set of them) that wraps axios or `fetch`, exposes typed functions per backend endpoint, and is the only place that knows request/response shapes. Derive those shapes from `docs/openapi.yaml` rather than guessing field names.
+- Styling: keep styling modular and consistent — CSS Modules or a single utility-CSS approach, not a mix of ad hoc inline styles, global CSS, and component styles.
+- Do not add a runtime or development dependency to `client/` unless the user explicitly approves it.
+- Do not commit `client/node_modules/`, `client/dist/`, or other generated output.
 
 ## Repository hygiene
 

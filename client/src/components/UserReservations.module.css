@@ -1,0 +1,81 @@
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  text-align: left;
+}
+
+.details p {
+  margin: 0 0 4px;
+}
+
+.resourceId {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+}
+
+.statusBadge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.statusPending {
+  composes: statusBadge;
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.statusConfirmed {
+  composes: statusBadge;
+  background: var(--accent-bg);
+  color: var(--text-h);
+}
+
+.statusCancelled {
+  composes: statusBadge;
+  background: var(--border);
+  color: var(--text);
+}
+
+.cancelButton {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  cursor: pointer;
+  font: inherit;
+}
+
+.cancelButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.status,
+.empty {
+  color: var(--text);
+}
+
+.errorText {
+  margin: 0;
+  color: #d33;
+  font-size: 14px;
+}
