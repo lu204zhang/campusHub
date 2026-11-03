@@ -1,41 +1,14 @@
-type ResourceType = 'ROOM' | 'EQUIPMENT' | 'LAB';
+import type {
+  ErrorResponse,
+  Reservation,
+  ReservationRequest,
+  ReservationStatus,
+  Resource,
+  ResourceType,
+} from '@campushub/shared-types';
 
-interface Resource {
-  id: string;
-  tenantId: string;
-  name: string;
-  type: ResourceType;
-  location: string;
-  isAvailable: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-type ReservationStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED';
-
-interface Reservation {
-  id: string;
-  tenantId: string;
-  resourceId: string;
-  userId: string;
-  startTime: string;
-  endTime: string;
-  status: ReservationStatus;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface CreateReservationDTO {
-  resourceId: string;
-  userId: string;
-  startTime: string;
-  endTime: string;
-}
-
-interface ApiErrorResponse {
-  code: string;
-  message: string;
-}
+type CreateReservationDTO = ReservationRequest;
+type ApiErrorResponse = ErrorResponse;
 
 class CampusHubApiError extends Error {
   public readonly status: number;
@@ -123,12 +96,17 @@ async function cancelReservation(tenantId: string, reservationId: string): Promi
   );
 }
 
+function resolveApiErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof CampusHubApiError ? error.message : fallback;
+}
+
 export {
   CampusHubApiError,
   cancelReservation,
   createReservation,
   fetchResources,
   fetchUserReservations,
+  resolveApiErrorMessage,
   type CreateReservationDTO,
   type Reservation,
   type ReservationStatus,

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 
 import {
-  CampusHubApiError,
   fetchResources,
+  resolveApiErrorMessage,
   type Resource,
   type ResourceType,
 } from '../api/campushubApi';
@@ -42,11 +42,7 @@ function ResourceList({ tenantId, onBook }: ResourceListProps): React.JSX.Elemen
         }
       } catch (loadError) {
         if (!cancelled) {
-          setError(
-            loadError instanceof CampusHubApiError
-              ? loadError.message
-              : 'Failed to load resources.',
-          );
+          setError(resolveApiErrorMessage(loadError, 'Failed to load resources.'));
         }
       } finally {
         if (!cancelled) {

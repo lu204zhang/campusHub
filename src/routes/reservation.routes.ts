@@ -6,8 +6,11 @@ import {
   listReservationsByUser,
   updateReservationStatus,
 } from '../controllers/reservation.controller';
+import { requireTenantId } from '../middleware/requireTenantId';
 
 const reservationRouter: ExpressRouter = Router();
+
+reservationRouter.use(requireTenantId);
 
 reservationRouter.post('/', createReservation);
 reservationRouter.get('/user/:userId', listReservationsByUser);

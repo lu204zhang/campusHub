@@ -1,7 +1,8 @@
-import express, { type ErrorRequestHandler, type Express } from 'express';
+import express, { type Express } from 'express';
 
 import { connectToDatabase } from './config/database';
 import { getPort } from './config/env';
+import { errorHandler } from './middleware/errorHandler';
 import { healthRouter } from './routes/health.routes';
 import { reservationRouter } from './routes/reservation.routes';
 import { resourceRouter } from './routes/resource.routes';
@@ -14,13 +15,7 @@ app.use('/api/v1/health', healthRouter);
 app.use('/api/v1/reservations', reservationRouter);
 app.use('/api/v1/resources', resourceRouter);
 
-const handleUnexpectedError: ErrorRequestHandler = (_error, _request, response, _next): void => {
-  response.status(500).json({
-    error: 'Internal server error',
-  });
-};
-
-app.use(handleUnexpectedError);
+app.use(errorHandler);
 
 connectToDatabase()
   .then((): void => {

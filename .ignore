@@ -1,0 +1,31 @@
+# Agent ignore file — keeps Claude Code's file search/read tools (Grep/Glob, which use
+# ripgrep and honor this file) off generated, vendored, and historical content so
+# queries stay scoped to source under src/ and client/src/.
+
+# Dependencies and lockfiles
+node_modules/
+client/node_modules/
+package-lock.json
+client/package-lock.json
+
+# Build output / generated API artifacts
+dist/
+build/
+client/dist/
+client/build/
+coverage/
+client/coverage/
+
+# Logs and historical run data
+*.log
+logs/
+npm-debug.log*
+
+# Generated bundle maps
+*.map
+*.bundle.js
+
+# Editor/OS cruft
+.DS_Store
+.idea/
+.vscode/

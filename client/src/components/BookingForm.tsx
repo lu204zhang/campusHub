@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react';
 import {
   CampusHubApiError,
   createReservation,
+  resolveApiErrorMessage,
   type Reservation,
   type Resource,
 } from '../api/campushubApi';
@@ -74,10 +75,8 @@ function BookingForm({
     } catch (error) {
       if (error instanceof CampusHubApiError && error.status === 409) {
         setSubmitError('This resource is already reserved for the selected time window.');
-      } else if (error instanceof CampusHubApiError) {
-        setSubmitError(error.message);
       } else {
-        setSubmitError('Failed to create reservation.');
+        setSubmitError(resolveApiErrorMessage(error, 'Failed to create reservation.'));
       }
     } finally {
       setIsSubmitting(false);

@@ -1,0 +1,8 @@
+{
+  "name": "@campushub/shared-types",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Type-only data shapes shared between the CampusHub backend and client, so they can't drift apart.",
+  "main": "src/index.ts",
+  "types": "src/index.ts"
+}
