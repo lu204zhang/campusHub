@@ -53,6 +53,13 @@ async function createReservation(
   const startTime = new Date(request.startTime);
   const endTime = new Date(request.endTime);
 
+  // Negated comparison so NaN (unparseable) dates are rejected too.
+  if (!(startTime.getTime() < endTime.getTime())) {
+    throw new ReservationValidationError(
+      'startTime and endTime must be valid dates, and startTime must precede endTime.',
+    );
+  }
+
   const resourceExists = await ResourceModel.exists({ _id: resourceId, tenantId });
   if (!resourceExists) {
     throw new ReservationValidationError(

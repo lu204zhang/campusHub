@@ -1,0 +1,2 @@
+# Check out text files with LF so Prettier's default endOfLine passes regardless of core.autocrlf.
+* text=auto eol=lf
