@@ -23,4 +23,14 @@ export default defineConfig(
       },
     },
   },
+  {
+    files: ['scripts/**/*.mts'],
+    extends: [tseslint.configs.recommendedTypeChecked],
+    languageOptions: {
+      parserOptions: {
+        project: './tsconfig.scripts.json',
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
 );

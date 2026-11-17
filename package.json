@@ -7,7 +7,7 @@
     "dev": "node --env-file-if-exists=.env -r ts-node/register src/app.ts",
     "build": "tsc",
     "start": "node --env-file-if-exists=.env dist/app.js",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json && tsc -p tsconfig.scripts.json",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",

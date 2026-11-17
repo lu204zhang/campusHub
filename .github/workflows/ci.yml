@@ -12,6 +12,8 @@ permissions:
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
+    outputs:
+      test-outcome: ${{ steps.test.outcome }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -29,4 +31,107 @@ jobs:
         run: npm run lint
 
       - name: Run Jest test suite
+        id: test
         run: npm test
+
+  auto-fix:
+    needs: lint-and-test
+    # Only when the Jest step itself failed (not lint), never for forks (read-only token),
+    # and never for an auto-heal branch, so a bad fix cannot trigger another round.
+    if: >-
+      failure() &&
+      needs.lint-and-test.outputs.test-outcome == 'failure' &&
+      !startsWith(github.head_ref, 'fix/auto-heal-') &&
+      (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      models: read
+    env:
+      BASE_BRANCH: ${{ github.head_ref || github.ref_name }}
+      FIX_BRANCH: fix/auto-heal-${{ github.run_id }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Check out the failing commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Capture Jest failure log
+        id: capture
+        shell: bash
+        env:
+          FORCE_COLOR: '0'
+        run: |
+          if npm test -- --ci 2>&1 | tee test-results.log; then
+            echo "Tests passed on re-run (likely flaky); skipping auto-fix."
+            echo "failing=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "failing=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate fix with AI agent (GitHub Models)
+        id: agent
+        if: steps.capture.outputs.failing == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AUTO_HEAL_LOG: test-results.log
+          AUTO_HEAL_SUMMARY: ${{ runner.temp }}/auto-heal-summary.md
+        run: node scripts/auto-heal.mts
+
+      - name: Verify the patch
+        id: verify
+        if: steps.agent.outputs.changed == 'true'
+        continue-on-error: true
+        shell: bash
+        run: |
+          { npm run lint && npm run typecheck && npm test -- --ci; } 2>&1 | tee "$RUNNER_TEMP/verify.log"
+
+      - name: Commit fix and open pull request
+        if: steps.agent.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERIFY_OUTCOME: ${{ steps.verify.outcome }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c "$FIX_BRANCH"
+          git add -- src
+          git commit -m "Auto-heal failing Jest tests from CI run $GITHUB_RUN_ID"
+          git push origin "$FIX_BRANCH"
+
+          title="Auto-heal: fix failing Jest tests (run $GITHUB_RUN_ID)"
+          {
+            cat "$RUNNER_TEMP/auto-heal-summary.md"
+            echo
+            echo '### Verification (lint, typecheck, tests on the patched code)'
+            if [ "$VERIFY_OUTCOME" = 'success' ]; then
+              echo 'Passed.'
+            else
+              title="[verification failed] $title"
+              echo 'Failed. Review carefully before merging. Last lines of the log:'
+              echo
+              echo '```'
+              tail -n 40 "$RUNNER_TEMP/verify.log"
+              echo '```'
+            fi
+            echo
+            echo "Triggered by the failing CI run: $RUN_URL"
+          } > "$RUNNER_TEMP/pr-body.md"
+
+          gh pr create \
+            --base "$BASE_BRANCH" \
+            --head "$FIX_BRANCH" \
+            --title "$title" \
+            --body-file "$RUNNER_TEMP/pr-body.md"
