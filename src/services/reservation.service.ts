@@ -72,7 +72,7 @@ async function createReservation(
     resourceId,
     status: { $ne: 'CANCELLED' },
     startTime: { $lt: endTime },
-    endTime: { $lt: startTime },
+    endTime: { $gt: startTime },
   });
 
   if (hasConflict) {
