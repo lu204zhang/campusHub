@@ -51,7 +51,7 @@ jobs:
       BASE_BRANCH: ${{ github.head_ref || github.ref_name }}
       FIX_BRANCH: fix/auto-heal-${{ github.run_id }}
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      AUTO_HEAL_MODEL: ${{ vars.AUTO_HEAL_MODEL || 'gpt-4.1' }}
+      AUTO_HEAL_MODEL: ${{ vars.AUTO_HEAL_MODEL || 'auto' }}
     steps:
       - name: Check for the COPILOT_PAT secret
         env:
@@ -101,23 +101,25 @@ jobs:
         if: steps.prepare.outputs.ready == 'true'
         run: npm install -g @github/copilot@1.0.112
 
+      # Called directly rather than through actions/ai-inference so Copilot CLI's stderr reaches the log.
       - name: Ask Copilot for a fix
-        id: inference
         if: steps.prepare.outputs.ready == 'true'
-        uses: actions/ai-inference@v3
-        with:
-          prompt-file: ${{ runner.temp }}/auto-heal/prompt.txt
-          system-prompt-file: ${{ runner.temp }}/auto-heal/system-prompt.txt
-          model: ${{ env.AUTO_HEAL_MODEL }}
+        shell: bash
         env:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_PAT }}
+          AUTO_HEAL_DIR: ${{ runner.temp }}/auto-heal
+        run: |
+          prompt="$(cat "$AUTO_HEAL_DIR/system-prompt.txt")"$'\n\n'"$(cat "$AUTO_HEAL_DIR/prompt.txt")"
+          copilot -p "$prompt" -s --no-ask-user --no-auto-update --model "$AUTO_HEAL_MODEL" \
+            > "$AUTO_HEAL_DIR/response.txt"
+          echo "Copilot replied with $(wc -c < "$AUTO_HEAL_DIR/response.txt") bytes."
 
       - name: Apply the agent's patch
         id: agent
         if: steps.prepare.outputs.ready == 'true'
         env:
           AUTO_HEAL_LOG: test-results.log
-          AUTO_HEAL_RESPONSE: ${{ steps.inference.outputs.response-file }}
+          AUTO_HEAL_RESPONSE: ${{ runner.temp }}/auto-heal/response.txt
           AUTO_HEAL_SUMMARY: ${{ runner.temp }}/auto-heal-summary.md
         run: node scripts/auto-heal.mts apply
 
