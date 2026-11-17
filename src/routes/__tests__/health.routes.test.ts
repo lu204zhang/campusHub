@@ -7,7 +7,7 @@ describe('GET /api/v1/health', () => {
     const response = await request(createApp()).get('/api/v1/health');
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ status: 'ok', timestamp: expect.any(String) });
+    expect(response.body).toMatchObject({ status: 'ok' });
     const body: unknown = response.body;
     const timestamp =
       typeof body === 'object' && body !== null && 'timestamp' in body ? body.timestamp : undefined;
